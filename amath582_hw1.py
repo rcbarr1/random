@@ -11,10 +11,8 @@ Code for AMATH 582 Homework 1 assignment.
 import numpy as np
 #import plotly
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 import plotly.io as pio
 import plotly.graph_objs as go
-#from IPython.display import clear_output
 pio.renderers.default='browser'
 
 # load in submarine data
@@ -34,16 +32,17 @@ y_grid = xx[0:N_grid] # spatial grid in y-direction
 z_grid = xx[0:N_grid] # spatial grid in z-direction
 
 # define frequency domain for x, y, and z dimensions - CHECK SCALING ON THIS
-#Kx_grid = (2*np.pi / (2/L)) * np.linspace(-N_grid/2, N_grid/2 - 1, N_grid) # frequency grid in x-direction
-#Ky_grid = (2*np.pi / (2/L)) * np.linspace(-N_grid/2, N_grid/2 - 1, N_grid) # frequency grid in y-direction
-#Kz_grid = (2*np.pi / (2/L)) * np.linspace(-N_grid/2, N_grid/2 - 1, N_grid) # frequency grid in z-direction
+Kx_grid = (2*np.pi / (2/L)) * np.linspace(-N_grid/2, N_grid/2 - 1, N_grid) # frequency grid in x-direction
+Ky_grid = (2*np.pi / (2/L)) * np.linspace(-N_grid/2, N_grid/2 - 1, N_grid) # frequency grid in y-direction
+Kz_grid = (2*np.pi / (2/L)) * np.linspace(-N_grid/2, N_grid/2 - 1, N_grid) # frequency grid in z-direction
 
-Kx_grid = np.linspace(-N_grid/2, N_grid/2 - 1, N_grid) # frequency grid in x-direction
-Ky_grid = np.linspace(-N_grid/2, N_grid/2 - 1, N_grid) # frequency grid in y-direction
-Kz_grid = np.linspace(-N_grid/2, N_grid/2 - 1, N_grid) # frequency grid in z-direction
+#Kx_grid = np.linspace(-N_grid/2, N_grid/2 - 1, N_grid) # frequency grid in x-direction
+#Ky_grid = np.linspace(-N_grid/2, N_grid/2 - 1, N_grid) # frequency grid in y-direction
+#Kz_grid = np.linspace(-N_grid/2, N_grid/2 - 1, N_grid) # frequency grid in z-direction
 
 # preallocate array to store Fourier results from each time step
 all_fhat_ss = np.zeros_like(subdata)
+
 # loop through time steps
 for i in range (0, subdata.shape[1]):
     # make 3D array of acoustic signal at the time step
@@ -84,10 +83,11 @@ fig.show()
 # create Gaussian filter centered around the center frequency
 # Gaussian filter (Kutz 13.2.1): F(k) = exp(-T(k - k0)^2)
 # expand to 3D: F([kx, ky, kz]) = exp[-T((kx - kx0)^2 + (ky - ky0)^2 + (kz - kz0)^2)]
-# FIND SOURCE FOR THIS
+# source: https://mathworld.wolfram.com/GaussianFunction.html
 # T = bandwidth of the filter
 # k0 = center frequency (kx0, ky0, kz0)
-T = 0.007 # tune this manually
+#T = 0.007 # tune this manually (this works for [-32, 31])
+T = 0.000007 # tune this manually (this works for [-1005.31, 973.89])
 
 # create Gaussian filter
 # preallocate array for storage
@@ -117,7 +117,6 @@ all_location_idx = np.zeros([subdata.shape[1], np.ndim(Gaussian_filter)]) # subm
 flat_Gaussian_filter = Gaussian_filter.flatten()
 
 for i in range (0, subdata.shape[1]):
-#for i in range (0, 1):
     # apply flattened Gaussian filter to flattened fhat
     filtered_fhat = all_fhat_ss[:,i] * flat_Gaussian_filter
     
@@ -155,7 +154,7 @@ ax = fig.add_subplot(111, projection = '3d')
 x_coords = all_location[:,0]
 y_coords = all_location[:,1]
 z_coords = all_location[:,2]
-time = np.linspace(0, 24, num = 49)
+time = np.flip(np.linspace(0, 24, num = 49))
 
 ax.plot3D(y_coords, x_coords, z_coords, color='black') # swapped x and y here to resemble submarine.gif
 scpl = ax.scatter3D(y_coords, x_coords, z_coords, c=time, alpha=0.5) # swapped x and y here to resemble submarine.gif
@@ -171,6 +170,7 @@ ax.set_title("Submarine Trajectory (3D View)")
 ax.set_xlabel('y') # swapped x and y here to resemble submarine.gif
 ax.set_ylabel('x') # swapped x and y here to resemble submarine.gif
 ax.set_zlabel('z')
+ax.invert_yaxis() # invert to resemble submarine.gif
 
 #%% task 3: determine and plot the x, y coordinates of the submarine during the
 # 24 hour period
@@ -182,7 +182,7 @@ ax = fig.gca()
 # set up location and time data
 x_coords = all_location[:,0]
 y_coords = all_location[:,1]
-time = np.linspace(0, 24, num = 49)
+time = np.flip(np.linspace(0, 24, num = 49))
 
 plt.plot(x_coords ,y_coords, color='black', linewidth=2)
 scpl = plt.scatter(x_coords ,y_coords, c=time, alpha=0.5)
@@ -200,7 +200,11 @@ ax.set_title("Submarine Trajectory (Top-Down View)")
 
 #%% bonus: implement an alternative technique for noise filtering,
 # substantially different from task 2, and visualize and compare the results
+# for this, basic assumption is changing: I will no longer assume the
+# submarine's frequency is constant in time
 
+# implement wavelet transformation (slide window, larger window at low
+# frequencies and smaller window at high frequencies)
 
 
 
