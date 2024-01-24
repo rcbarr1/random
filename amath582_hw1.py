@@ -32,11 +32,6 @@ Kx_grid = (2*np.pi / (2/L)) * np.linspace(-N_grid/2, N_grid/2 - 1, N_grid) # fre
 Ky_grid = (2*np.pi / (2/L)) * np.linspace(-N_grid/2, N_grid/2 - 1, N_grid) # frequency grid in y-direction
 Kz_grid = (2*np.pi / (2/L)) * np.linspace(-N_grid/2, N_grid/2 - 1, N_grid) # frequency grid in z-direction
 
-# alternative scaling method
-#Kx_grid = np.linspace(-N_grid/2, N_grid/2 - 1, N_grid) # frequency grid in x-direction
-#Ky_grid = np.linspace(-N_grid/2, N_grid/2 - 1, N_grid) # frequency grid in y-direction
-#Kz_grid = np.linspace(-N_grid/2, N_grid/2 - 1, N_grid) # frequency grid in z-direction
-
 # preallocate array to store Fourier results from each time step
 all_fhat_ss = np.zeros_like(subdata)
 
@@ -63,7 +58,7 @@ avg_fhat_ss_abs = np.reshape(avg_fhat_ss_abs, (N_grid, N_grid, N_grid))
 center_freq_idx = np.where(avg_fhat_ss_abs == avg_fhat_ss_abs.max()) # find index of center frequency
 center_freq = [Kx_grid[center_freq_idx[0][0]], Ky_grid[center_freq_idx[1][0]], Kz_grid[center_freq_idx[2][0]]] # convert to kx, ky, kz grid
 
-#%% visualize high frequency data in spatial domain
+# visualize high frequency data in spatial domain
 # set up figure
 fig = plt.figure(figsize=(4,4))
 ax = fig.add_subplot(111, projection = '3d')
@@ -80,7 +75,7 @@ subdata_thresh = subdata_abs_norm
 all_subdata_thresh = np.sum(subdata_thresh, axis=1)
 all_subdata_thresh = all_subdata_thresh / all_subdata_thresh.max() # normalize again
 all_subdata_thresh[all_subdata_thresh < 0.80] = np.nan
-all_subdata_thresh[all_subdata_thresh >= 0.80] = 10
+all_subdata_thresh[all_subdata_thresh >= 0.80] = 1
 all_subdata_thresh = np.reshape(all_subdata_thresh, (N_grid, N_grid, N_grid))
 
 # preallocate array to store data
@@ -106,7 +101,7 @@ ax.set_ylabel('x') # swapped x and y here to resemble submarine.gif
 ax.set_zlabel('z')
 ax.invert_yaxis() # invert to resemble submarine.gif
 
-#%% visual inspection: plot averaged fourier domain
+# visual inspection: plot averaged fourier domain
 # set up figure
 fig = plt.figure(figsize=(4.4,4.4))
 ax = fig.add_subplot(111, projection = '3d')
@@ -135,7 +130,6 @@ ax.set_zlabel('$k_{z}$')
 ax.invert_yaxis() # invert to resemble submarine.gif
 fig.legend(loc='lower right')
 
-
 #%% task 2: design and implement a filter to extract this frequency signature
 # in order to denoise the data and determine a more robust path of the
 # submarine
@@ -147,8 +141,7 @@ fig.legend(loc='lower right')
 # source: https://mathworld.wolfram.com/GaussianFunction.html
 # T = bandwidth of the filter
 # k0 = center frequency (kx0, ky0, kz0)
-#T = 0.007 # tune this manually (this works for [-32, 31])
-T = 0.000007 # tune this manually (this works for [-1005.31, 973.89])
+T = 0.000007 # tune this manually
 
 # create Gaussian filter
 # preallocate array for storage
@@ -174,7 +167,7 @@ for i in range(0, len(Kx_grid)): # loop through x-dimension
 all_f_clean = np.zeros_like(np.abs(subdata)) # IFFT results
 all_location_idx = np.zeros([subdata.shape[1], np.ndim(Gaussian_filter)]) # submarine location at each time step
 
-#%% plot Gaussian filter
+# plot Gaussian filter
 # set up figure
 fig = plt.figure()
 ax = fig.add_subplot(111, projection = '3d')
@@ -207,8 +200,6 @@ ax.set_ylabel('$k_{x}$') # swapped x and y here to resemble submarine.gif
 ax.set_zlabel('$k_{z}$')
 ax.invert_yaxis() # invert to resemble submarine.gif
 
-
-#%%
 # flatten Gaussian filter
 flat_Gaussian_filter = Gaussian_filter.flatten()
 
@@ -241,7 +232,6 @@ for i in range(0,len(all_location)):
     all_location[i,2] = z_grid[int(all_location_idx[i,2])]
 
 # plot actual coordinates in 3D
-
 # set up figure
 fig = plt.figure()
 ax = fig.add_subplot(111, projection = '3d')
