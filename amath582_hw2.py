@@ -15,9 +15,6 @@ QUESTIONS FOR OA
       - am I computing centroids incorrectly?
       - or distance? those are the two things that could be wrong I guess?
       - or is it because I'm computing the centroid and everything is okay
-- do I need to scale the data? It works better if it doesn't but seems like the
-  documentation online says I do need to
-      - currently using sklearn.preprocessing.StandardScaler to do so
 - my accuracy is really bad, is that expected with this method?
       
 """
@@ -25,7 +22,6 @@ QUESTIONS FOR OA
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA 
-from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score
 from scipy.spatial import distance
 
@@ -52,23 +48,16 @@ for file in files:
     xtrain[i,:] = traindata.flatten()
     i += 1
 
-# scale dataset to have unit variance and zero mean
-#std_scaler = StandardScaler()
-#xtrain_scaled = std_scaler.fit_transform(xtrain)
-xtrain_scaled = xtrain
-
 # perform PCA, get first 5 PCA modes
 pca = PCA(n_components=5)
-principal_components = pca.fit_transform(xtrain_scaled)
+xtrain_proj = pca.fit_transform(xtrain)
 
 # transform back to xyz space
-xtrain_5modes = pca.inverse_transform(principal_components)
+xtrain_5modes = pca.inverse_transform(xtrain_proj)
 
-# plot walking in xyz space (scatter)
-
+# prepare for plotting
 # define the root joint
 r = 1000
-
 # define the connections between the joints 
 I = np.array([1, 2, 3, 4, 5, 6, 1, 8, 9, 10, 11, 12, 1, 14, 15, 16, 17, 18, 19,
               16, 21, 22, 23, 25, 26, 24, 28, 16, 30, 31, 32, 33, 34, 35, 33,
@@ -209,7 +198,7 @@ cum_E = np.zeros((xtrain.shape[0],))
 # calculate cumulative energy for each PCA mode
 for i in range (0,xtrain.shape[0]):
     pca = PCA(n_components=i)
-    pca.fit(xtrain_scaled)
+    pca.fit(xtrain)
     cum_E[i] = np.sum(pca.explained_variance_ratio_)
     
 # plot cumulative energy
@@ -220,33 +209,37 @@ ax.set_ylabel('Cumulative Energy ($\\Sigma E_j$)')
 ax.set_xlabel('Number of PCA Modes')
 
 # answers to task 2 (from cum_E array)
-# 70% - 4 PCA modes (explains 73.5% of variance)
-# 80% - 5 PCA modes (explains 81.2% of variance)
-# 90% - 8 PCA modes (explains 92.5% of variance)
-# 95% - 10 PCA modes (explains 97.1% of variance)
+# 70% - 3 PCA modes (explains 77.2% of variance)
+# 80% - 4 PCA modes (explains 83.2% of variance)
+# 90% - 6 PCA modes (explains 90.7% of variance)
+# 95% - 8 PCA modes (explains 95.9% of variance)
 
 #%% task 3: truncate the PCA modes to 2 and 3 modes and plot the projected
 # xtrain in truncated PCA space as low dimensional 2D (PC1, PC2 coordinates)
 # and 3D (PC2, PC2, PC3 coordinates) trajectories. Use colors for different
 # movements and discuss the visualization and your findings.
 
+# not plotting actual principal components, I need to plot the projection of the actual data onto the principal components
+# should see a point for each time sample
+# should see trajectories
+
 # 2D PCA space
 pca = PCA(n_components=2)
-principal_components = pca.fit_transform(xtrain_scaled)
+xtrain_proj = pca.fit_transform(xtrain)
 
 # plot 2D PCA
 fig = plt.figure(figsize=(7,5))
 ax = fig.gca()
 ax.set_xlabel('Principal Component 1')
 ax.set_ylabel('Principal Component 2')
-ax.scatter(principal_components[0:4, 0], principal_components[0:4, 1], label='Jumping')
-ax.scatter(principal_components[4:9, 0], principal_components[4:9, 1], label='Running')
-ax.scatter(principal_components[9:14, 0], principal_components[9:14, 1], label='Walking')
+ax.scatter(xtrain_proj[0:4, 0], xtrain_proj[0:4, 1], label='Jumping')
+ax.scatter(xtrain_proj[4:9, 0], xtrain_proj[4:9, 1], label='Running')
+ax.scatter(xtrain_proj[9:14, 0], xtrain_proj[9:14, 1], label='Walking')
 ax.legend()
 
 # 3D PCA space
 pca = PCA(n_components=3)
-principal_components = pca.fit_transform(xtrain_scaled)
+xtrain_proj = pca.fit_transform(xtrain)
 
 # plot 3D PCA
 fig = plt.figure(figsize=(7,5))
@@ -254,9 +247,9 @@ ax = fig.add_subplot(111, projection = '3d')
 ax.set_xlabel('Principal Component 1')
 ax.set_ylabel('Principal Component 2')
 ax.set_zlabel('Principal Component 3')
-ax.scatter3D(principal_components[0:4, 0], principal_components[0:4, 1], principal_components[0:4, 2], label='Jumping')
-ax.scatter3D(principal_components[4:9, 0], principal_components[4:9, 1], principal_components[4:9, 2], label='Running')
-ax.scatter3D(principal_components[9:14, 0], principal_components[9:14, 1], principal_components[9:14, 2], label='Walking')
+ax.scatter3D(xtrain_proj[0:4, 0], xtrain_proj[0:4, 1], xtrain_proj[0:4, 2], label='Jumping')
+ax.scatter3D(xtrain_proj[4:9, 0], xtrain_proj[4:9, 1], xtrain_proj[4:9, 2], label='Running')
+ax.scatter3D(xtrain_proj[9:14, 0], xtrain_proj[9:14, 1], xtrain_proj[9:14, 2], label='Walking')
 ax.legend()
 
 #%% task 4: create a ground truth table with an integer per class and assign an
@@ -280,12 +273,12 @@ centroids = np.zeros((3,xtrain.shape[0]))
 
 # do PCA
 pca = PCA(n_components=xtrain.shape[0])
-principal_components = pca.fit_transform(xtrain_scaled)
+xtrain_proj = pca.fit_transform(xtrain)
 
-for i in range(0, principal_components.shape[1]):
-    centroids[0,i] = np.mean(principal_components[0:4, i])
-    centroids[1,i] = np.mean(principal_components[4:9, i])
-    centroids[2,i] = np.mean(principal_components[9:14, i])
+for i in range(0, xtrain_proj.shape[1]):
+    centroids[0,i] = np.mean(xtrain_proj[0:4, i])
+    centroids[1,i] = np.mean(xtrain_proj[4:9, i])
+    centroids[2,i] = np.mean(xtrain_proj[9:14, i])
 
 #%% task 5: create another vector of trained labels. To assign these labels,
 # for each sample in xtrain compute the distance between the projected point in
@@ -302,19 +295,21 @@ for i in range(0, principal_components.shape[1]):
 # point in k-modes PCA space and each of the centroids. Choose the minimum
 # distance and assign the corresponding label.
 
-# do PCA, principal_components contains k-modes information for each training dataset point
+# do PCA, xtrain_proj contains k-modes information for each training dataset point
 pca = PCA(n_components=xtrain.shape[0])
-principal_components = pca.fit_transform(xtrain_scaled)
+xtrain_proj = pca.fit_transform(xtrain)
 
 # for each mode, compute distance between the point and the centroid
 # initialize array to store distance between point and centroid
 classified = np.zeros((xtrain.shape[0],xtrain.shape[0]))
 
+# should be computing the distance between the projection onto the principal components and the centroid, not the distance between the principal components and the centroid
+
 for j in range(0, xtrain.shape[0]):
     for i in range(0, xtrain.shape[0]):
-        dist0 = distance.euclidean(principal_components[i,0:j+1], centroids[0,0:j+1])
-        dist1 = distance.euclidean(principal_components[i,0:j+1], centroids[1,0:j+1]) 
-        dist2 = distance.euclidean(principal_components[i,0:j+1], centroids[2,0:j+1])
+        dist0 = distance.euclidean(xtrain_proj[i,0:j+1], centroids[0,0:j+1])
+        dist1 = distance.euclidean(xtrain_proj[i,0:j+1], centroids[1,0:j+1]) 
+        dist2 = distance.euclidean(xtrain_proj[i,0:j+1], centroids[2,0:j+1])
         
         # choose minimum distance for each row, assign label
         dists = [dist0, dist1, dist2]
@@ -342,12 +337,8 @@ for file in files:
     xtest[i,:] = testdata.flatten()
     i += 1
 
-# scale dataset to have unit variance and zero mean
-#xtest_scaled = std_scaler.fit_transform(xtest)
-xtest_scaled = xtest
-
 # project test data into PCA space
-test_principal_components = pca.transform(xtest_scaled)
+xtest_proj = pca.transform(xtest)
 
 # for each mode, compute distance between the point and the centroid
 # initialize array to store distance between point and centroid
@@ -355,9 +346,9 @@ test_classified = np.zeros((xtest.shape[0],xtrain.shape[0]))
 
 for j in range(0, xtrain.shape[0]):
     for i in range(0, xtest.shape[0]):
-        dist0 = distance.euclidean(test_principal_components[i,0:j+1], centroids[0,0:j+1])
-        dist1 = distance.euclidean(test_principal_components[i,0:j+1], centroids[1,0:j+1]) 
-        dist2 = distance.euclidean(test_principal_components[i,0:j+1], centroids[2,0:j+1])
+        dist0 = distance.euclidean(xtest_proj[i,0:j+1], centroids[0,0:j+1])
+        dist1 = distance.euclidean(xtest_proj[i,0:j+1], centroids[1,0:j+1]) 
+        dist2 = distance.euclidean(xtest_proj[i,0:j+1], centroids[2,0:j+1])
         
         # choose minimum distance for each row, assign label
         dists = [dist0, dist1, dist2]
