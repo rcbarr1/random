@@ -8,10 +8,8 @@ Created on Tue Jan 30 07:11:13 2024
 Code for AMATH 582 Homework 2 assignment.
 
 QUESTIONS FOR OA
-- what does visualizing in xyz space mean?
-    - do you want one plot of 5 PCA modes or like 5 plots here
-    - one plot for each of the movements? so 14 movements total? or can I look
-      at each movement (so 3 plots)?
+- what does visualizing in xyz space mean? does this look okay? just one plot
+  for unmodified, one for 5 modes?
 - if I'm using all 14 PCA modes, shouldn't my classifier work 100% correctly?
   It's not, and I'm confused
       - am I computing centroids incorrectly?
@@ -54,15 +52,10 @@ for file in files:
     xtrain[i,:] = traindata.flatten()
     i += 1
 
-# plot data in xtrain: 2-D
-fig = plt.figure(figsize=(7,5))
-ax = fig.gca()
-ax.plot(xtrain)
-
 # scale dataset to have unit variance and zero mean
-std_scaler = StandardScaler()
-xtrain_scaled = std_scaler.fit_transform(xtrain)
-#xtrain_scaled = xtrain
+#std_scaler = StandardScaler()
+#xtrain_scaled = std_scaler.fit_transform(xtrain)
+xtrain_scaled = xtrain
 
 # perform PCA, get first 5 PCA modes
 pca = PCA(n_components=5)
@@ -71,17 +64,140 @@ principal_components = pca.fit_transform(xtrain_scaled)
 # transform back to xyz space
 xtrain_5modes = pca.inverse_transform(principal_components)
 
-#%%
-# plot first 5 PCA modes in xyz space - THIS IS WRONG HERE
-for i in range(0,5):
-    mode = np.reshape(principal_components[:,i], (38,3,-1))
-    fig = plt.figure(figsize=(7,5))
-    ax = fig.add_subplot(111, projection = '3d')
-    ax.set_title('PCA Mode ' + str(i+1))
-    for j in range(0,mode.shape[2]):
-        ax.scatter(mode[:,0,j],mode[:,1,j],mode[:,2,j]) # this is all time steps on one plot? is this correct?
+# plot walking in xyz space (scatter)
+
+# define the root joint
+r = 1000
+
+# define the connections between the joints 
+I = np.array([1, 2, 3, 4, 5, 6, 1, 8, 9, 10, 11, 12, 1, 14, 15, 16, 17, 18, 19,
+              16, 21, 22, 23, 25, 26, 24, 28, 16, 30, 31, 32, 33, 34, 35, 33,
+              37]) - 1
+J = np.array([2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+              20, 21, 22, 23, 24, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36,
+              37, 38]) - 1
+
+# make plot of jumping unmodified
+fig = plt.figure(figsize=(7,5))
+ax = plt.axes(projection = '3d')
+
+for train_num in range(0,4):
+    xyz = np.reshape(xtrain[train_num,:], (38,3,-1))
+    xroot, yroot, zroot = xyz[0,0,0], xyz[0,0,1], xyz[0,0,2] # define scaling of the values
+    for t in range(1,xyz.shape[2]):  
+        for ij in range(0,I.shape[0]):
+            xline = np.array([xyz[I[ij],0,t], xyz[J[ij],0,t]])
+            yline = np.array([xyz[I[ij],1,t], xyz[J[ij],1,t]])
+            zline = np.array([xyz[I[ij],2,t], xyz[J[ij],2,t]])
+            # use plot if you'd like to plot skeleton with lines
+            ax.plot(xline,yline,zline,c='steelblue',alpha = 0.05)
         
-# x, y, and z labels? set axis limits? colors?
+ax.set_xlim([-r+xroot, r+xroot])
+ax.set_zlim([-r+zroot, r+zroot])
+ax.set_ylim([-r+yroot, r+yroot])
+ax.set_title('Jumping (Unmodified)')
+        
+# plot of jumping with 5 PCA modes
+fig = plt.figure(figsize=(7,5))
+ax = plt.axes(projection = '3d')
+
+for train_num in range(0,4):
+    xyz_5modes = np.reshape(xtrain_5modes[train_num,:], (38,3,-1))
+    xroot, yroot, zroot = xyz_5modes[0,0,0], xyz_5modes[0,0,1], xyz_5modes[0,0,2] # define scaling of the values
+    for t in range(1,xyz.shape[2]):  
+        for ij in range(0,I.shape[0]):
+            xline = np.array([xyz_5modes[I[ij],0,t], xyz_5modes[J[ij],0,t]])
+            yline = np.array([xyz_5modes[I[ij],1,t], xyz_5modes[J[ij],1,t]])
+            zline = np.array([xyz_5modes[I[ij],2,t], xyz_5modes[J[ij],2,t]])
+            # use plot if you'd like to plot skeleton with lines
+            ax.plot(xline,yline,zline,c='steelblue',alpha = 0.05)
+        
+ax.set_xlim([-r+xroot, r+xroot])
+ax.set_zlim([-r+zroot, r+zroot])
+ax.set_ylim([-r+yroot, r+yroot])
+ax.set_title('Jumping (5 PCA Modes)')
+
+# make plot of running unmodified
+fig = plt.figure(figsize=(7,5))
+ax = plt.axes(projection = '3d')
+
+for train_num in range(4,9):
+    xyz = np.reshape(xtrain[train_num,:], (38,3,-1))
+    xroot, yroot, zroot = xyz[0,0,0], xyz[0,0,1], xyz[0,0,2] # define scaling of the values
+    for t in range(1,xyz.shape[2]):  
+        for ij in range(0,I.shape[0]):
+            xline = np.array([xyz[I[ij],0,t], xyz[J[ij],0,t]])
+            yline = np.array([xyz[I[ij],1,t], xyz[J[ij],1,t]])
+            zline = np.array([xyz[I[ij],2,t], xyz[J[ij],2,t]])
+            # use plot if you'd like to plot skeleton with lines
+            ax.plot(xline,yline,zline,c='steelblue',alpha = 0.05)
+        
+ax.set_xlim([-r+xroot, r+xroot])
+ax.set_zlim([-r+zroot, r+zroot])
+ax.set_ylim([-r+yroot, r+yroot])
+ax.set_title('Running (Unmodified)')
+        
+      
+# plot of running with 5 PCA modes
+fig = plt.figure(figsize=(7,5))
+ax = plt.axes(projection = '3d')
+
+for train_num in range(4,9):
+    xyz_5modes = np.reshape(xtrain_5modes[train_num,:], (38,3,-1))
+    xroot, yroot, zroot = xyz_5modes[0,0,0], xyz_5modes[0,0,1], xyz_5modes[0,0,2] # define scaling of the values
+    for t in range(1,xyz.shape[2]):  
+        for ij in range(0,I.shape[0]):
+            xline = np.array([xyz_5modes[I[ij],0,t], xyz_5modes[J[ij],0,t]])
+            yline = np.array([xyz_5modes[I[ij],1,t], xyz_5modes[J[ij],1,t]])
+            zline = np.array([xyz_5modes[I[ij],2,t], xyz_5modes[J[ij],2,t]])
+            # use plot if you'd like to plot skeleton with lines
+            ax.plot(xline,yline,zline,c='steelblue',alpha = 0.05)
+        
+ax.set_xlim([-r+xroot, r+xroot])
+ax.set_zlim([-r+zroot, r+zroot])
+ax.set_ylim([-r+yroot, r+yroot])
+ax.set_title('Running (5 PCA Modes)')
+
+# make plot of walking unmodified
+fig = plt.figure(figsize=(7,5))
+ax = plt.axes(projection = '3d')
+
+for train_num in range(9,14):
+    xyz = np.reshape(xtrain[train_num,:], (38,3,-1))
+    xroot, yroot, zroot = xyz[0,0,0], xyz[0,0,1], xyz[0,0,2] # define scaling of the values
+    for t in range(1,xyz.shape[2]):  
+        for ij in range(0,I.shape[0]):
+            xline = np.array([xyz[I[ij],0,t], xyz[J[ij],0,t]])
+            yline = np.array([xyz[I[ij],1,t], xyz[J[ij],1,t]])
+            zline = np.array([xyz[I[ij],2,t], xyz[J[ij],2,t]])
+            # use plot if you'd like to plot skeleton with lines
+            ax.plot(xline,yline,zline,c='steelblue',alpha = 0.05)
+        
+ax.set_xlim([-r+xroot, r+xroot])
+ax.set_zlim([-r+zroot, r+zroot])
+ax.set_ylim([-r+yroot, r+yroot])
+ax.set_title('Walking (Unmodified)')
+        
+      
+# plot of running with 5 PCA modes
+fig = plt.figure(figsize=(7,5))
+ax = plt.axes(projection = '3d')
+
+for train_num in range(9,14):
+    xyz_5modes = np.reshape(xtrain_5modes[train_num,:], (38,3,-1))
+    xroot, yroot, zroot = xyz_5modes[0,0,0], xyz_5modes[0,0,1], xyz_5modes[0,0,2] # define scaling of the values
+    for t in range(1,xyz.shape[2]):  
+        for ij in range(0,I.shape[0]):
+            xline = np.array([xyz_5modes[I[ij],0,t], xyz_5modes[J[ij],0,t]])
+            yline = np.array([xyz_5modes[I[ij],1,t], xyz_5modes[J[ij],1,t]])
+            zline = np.array([xyz_5modes[I[ij],2,t], xyz_5modes[J[ij],2,t]])
+            # use plot if you'd like to plot skeleton with lines
+            ax.plot(xline,yline,zline,c='steelblue',alpha = 0.05)
+        
+ax.set_xlim([-r+xroot, r+xroot])
+ax.set_zlim([-r+zroot, r+zroot])
+ax.set_ylim([-r+yroot, r+yroot])
+ax.set_title('Walking (5 PCA Modes)')
 
 #%% task 2: investigate how many PCA modes to keep in order to approximate
 # Xtrain up to 70%, 80%, 90%, and 95%. Plot the cumulative energy to justify
@@ -227,8 +343,8 @@ for file in files:
     i += 1
 
 # scale dataset to have unit variance and zero mean
-xtest_scaled = std_scaler.fit_transform(xtest)
-#xtest_scaled = xtest
+#xtest_scaled = std_scaler.fit_transform(xtest)
+xtest_scaled = xtest
 
 # project test data into PCA space
 test_principal_components = pca.transform(xtest_scaled)
