@@ -46,7 +46,6 @@ xtrain_proj = pca.fit_transform(xtrain)
 # transform back to xyz space
 xtrain_5modes = pca.inverse_transform(xtrain_proj)
 
-
 def plot_xyz(motion_type, modified_flag, xtrain):
     # motion_type: 0 = jumping, 1 = running, 2 = walking
     # modified_flag: 0 = unmodified, 1 = modified
@@ -81,7 +80,7 @@ def plot_xyz(motion_type, modified_flag, xtrain):
                   37, 38]) - 1
     
     # set up figure
-    fig = plt.figure(figsize=(7,5))
+    fig = plt.figure(figsize=(7,5), dpi=200)
     ax = plt.axes(projection = '3d')
 
     for train_num in range(a,b):
@@ -99,7 +98,7 @@ def plot_xyz(motion_type, modified_flag, xtrain):
     ax.set_zlim([-r+zroot, r+zroot])
     ax.set_ylim([-r+yroot, r+yroot])
     ax.set_title(motion_name + ' (' + modified_label + ')')
-  
+ 
 # plot jumping unmodified
 plot_xyz(0, 0, xtrain)
 
@@ -125,62 +124,32 @@ plot_xyz(2, 1, xtrain_5modes)
 # initialize array to store cumulative energy at each PCA mode
 cum_E = np.zeros((xtrain.shape[1],))
 
-# calculate cumulative energy for each PCA mode
+# calculate cumulative energy for each PCA mode3
 for i in range (0,xtrain.shape[1]):
     pca = PCA(n_components=i)
     pca.fit(xtrain)
     cum_E[i] = np.sum(pca.explained_variance_ratio_)
     
 # plot cumulative energy
-fig = plt.figure(figsize=(7,5))
+fig = plt.figure(figsize=(7,5),dpi=200)
 ax = fig.gca()
-ax.plot(cum_E)
+ax.plot(cum_E,linewidth=2,label='_nolegend_')
+ax.axhline(y=0.7, c='sandybrown', label='70%', linestyle=':', linewidth=2)
+ax.axhline(y=0.8, c='palevioletred', label='80%', linestyle=':', linewidth=2)
+ax.axhline(y=0.9, c='mediumpurple' , label='90%', linestyle=':', linewidth=2)
+ax.axhline(y=0.95, c='mediumseagreen' , label='95%', linestyle=':', linewidth=2)
+
 ax.set_ylabel('Cumulative Energy ($\\Sigma E_j$)')
 ax.set_xlabel('Number of PCA Modes')
+#ax.set_ylim([0,1.04])
+ax.set_xlim([0,114])
+ax.legend(loc='lower right')
 
 # answers to task 2 (from cum_E array)
 # 70% - 2 PCA modes (explains 72.7% of variance)
 # 80% - 3 PCA modes (explains 82.9% of variance)
 # 90% - 5 PCA modes (explains 91.2% of variance)
 # 95% - 7 PCA modes (explains 95.4% of variance)
-
-#%% task 3: truncate the PCA modes to 2 and 3 modes and plot the projected
-# xtrain in truncated PCA space as low dimensional 2D (PC1, PC2 coordinates)
-# and 3D (PC2, PC2, PC3 coordinates) trajectories. Use colors for different
-# movements and discuss the visualization and your findings.
-
-# not plotting actual principal components, I need to plot the projection of the actual data onto the principal components
-# should see a point for each time sample
-# should see trajectories
-
-# 2D PCA space
-pca = PCA(n_components=2)
-xtrain_proj = pca.fit_transform(xtrain)
-
-# plot 2D PCA
-fig = plt.figure(figsize=(7,5))
-ax = fig.gca()
-ax.set_xlabel('Principal Component 1')
-ax.set_ylabel('Principal Component 2')
-ax.scatter(xtrain_proj[0:500, 0], xtrain_proj[0:500, 1], label='Jumping', alpha = 0.5)
-ax.scatter(xtrain_proj[500:1000, 0], xtrain_proj[500:1000, 1], label='Running', alpha = 0.5)
-ax.scatter(xtrain_proj[1000:1500, 0], xtrain_proj[1000:1500, 1], label='Walking', alpha = 0.5)
-ax.legend()
-
-# 3D PCA space
-pca = PCA(n_components=3)
-xtrain_proj = pca.fit_transform(xtrain)
-
-# plot 3D PCA
-fig = plt.figure(figsize=(7,5))
-ax = fig.add_subplot(111, projection = '3d')
-ax.set_xlabel('Principal Component 1')
-ax.set_ylabel('Principal Component 2')
-ax.set_zlabel('Principal Component 3')
-ax.scatter3D(xtrain_proj[0:500, 0], xtrain_proj[0:500, 1], xtrain_proj[0:500, 2], label='Jumping', alpha = 0.5)
-ax.scatter3D(xtrain_proj[500:1000, 0], xtrain_proj[500:1000, 1], xtrain_proj[500:1000, 2], label='Running', alpha = 0.5)
-ax.scatter3D(xtrain_proj[1000:1500, 0], xtrain_proj[1000:1500, 1], xtrain_proj[1000:1500, 2], label='Walking', alpha = 0.5)
-ax.legend()
 
 #%% task 4: create a ground truth table with an integer per class and assign an
 # appropriate label to each sample in xtrain. Then, for each movement compute
@@ -209,6 +178,47 @@ for i in range(0, xtrain_proj.shape[1]):
     centroids[0,i] = np.mean(xtrain_proj[0:500, i])
     centroids[1,i] = np.mean(xtrain_proj[500:1000, i])
     centroids[2,i] = np.mean(xtrain_proj[1000:1500, i])
+
+#%% task 3: truncate the PCA modes to 2 and 3 modes and plot the projected
+# xtrain in truncated PCA space as low dimensional 2D (PC1, PC2 coordinates)
+# and 3D (PC2, PC2, PC3 coordinates) trajectories. Use colors for different
+# movements and discuss the visualization and your findings.
+
+# not plotting actual principal components, I need to plot the projection of the actual data onto the principal components
+# should see a point for each time sample
+# should see trajectories
+
+# 2D PCA space
+pca = PCA(n_components=2)
+xtrain_proj = pca.fit_transform(xtrain)
+
+# plot 2D PCA
+fig = plt.figure(figsize=(6,5), dpi=200)
+ax = fig.gca()
+ax.set_xlabel('Principal Component 1')
+ax.set_ylabel('Principal Component 2')
+ax.scatter(xtrain_proj[0:500, 0], xtrain_proj[0:500, 1], label='Jumping', alpha = 0.5)
+ax.scatter(xtrain_proj[500:1000, 0], xtrain_proj[500:1000, 1], label='Running', alpha = 0.5)
+ax.scatter(xtrain_proj[1000:1500, 0], xtrain_proj[1000:1500, 1], label='Walking', alpha = 0.5)
+ax.scatter(centroids[:,0], centroids[:,1], c='black', marker='x', label='Centroid')
+#ax.legend()
+
+# 3D PCA space
+pca = PCA(n_components=3)
+xtrain_proj = pca.fit_transform(xtrain)
+
+# plot 3D PCA
+fig = plt.figure(figsize=(7,5), dpi=200)
+ax = fig.add_subplot(111, projection = '3d')
+ax.set_xlabel('Principal Component 1')
+ax.set_ylabel('Principal Component 2')
+ax.set_zlabel('Principal Component 3')
+ax.scatter3D(xtrain_proj[0:500, 0], xtrain_proj[0:500, 1], xtrain_proj[0:500, 2], label='Jumping', alpha = 0.5)
+ax.scatter3D(xtrain_proj[500:1000, 0], xtrain_proj[500:1000, 1], xtrain_proj[500:1000, 2], label='Running', alpha = 0.5)
+ax.scatter3D(xtrain_proj[1000:1500, 0], xtrain_proj[1000:1500, 1], xtrain_proj[1000:1500, 2], label='Walking', alpha = 0.5)
+ax.scatter(centroids[:,0], centroids[:,1], centroids[:,2], c='black', s=30, marker='x', label='Centroid')
+plt.legend(loc='upper center', bbox_to_anchor=(1, 1.1), fancybox=True, shadow=True)
+
 
 #%% task 5: create another vector of trained labels. To assign these labels,
 # for each sample in xtrain compute the distance between the projected point in
@@ -250,6 +260,14 @@ for j in range(0, xtrain.shape[1]):
 scores = np.zeros(xtrain.shape[1])
 for i in range(0,xtrain.shape[1]):
     scores[i] = accuracy_score(train_truth, classified[:,i])
+    
+fig = plt.figure(figsize=(7,5), dpi=200)
+ax = fig.gca()
+ax.plot(scores*100, linewidth=2)
+ax.set_xlabel('Number of PCA Modes')
+ax.set_ylabel('Accuracy Score (%)')
+ax.set_ylim([0, 100])
+ax.set_xlim([-3, 114])
 
 #%% task 6: load the given test samples and for each sample assign the ground
 # truth label. By projecting into k-PCA space and computing the centroids,
@@ -292,7 +310,13 @@ test_scores = np.zeros(xtest.shape[1])
 for i in range(0,xtest.shape[1]):
     test_scores[i] = accuracy_score(test_truth, test_classified[:,i])
 
-
+fig = plt.figure(figsize=(7,5), dpi=200)
+ax = fig.gca()
+ax.plot(test_scores*100, linewidth=2)
+ax.set_xlabel('Number of PCA Modes')
+ax.set_ylabel('Accuracy Score (%)')
+ax.set_ylim([0, 100])
+ax.set_xlim([-3, 114])
 
 
 
