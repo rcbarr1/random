@@ -8,7 +8,7 @@ Created on Mon Feb 12 09:54:40 2024
 Code for AMATH 582 Homework 3 assignment.
 
 TO-DO:
-    - what does "plot the first 16 PC modes as 28 x 28 images mean? like one digit in all 16 modes?"
+    - what does "plot the first 16 PC modes as 28 x 28 images" mean? like one digit in all 16 modes?
 """
 
 import numpy as np
@@ -16,6 +16,10 @@ import struct
 from sklearn.decomposition import PCA 
 import matplotlib.pyplot as plt
 from sklearn.linear_model import RidgeClassifierCV
+from sklearn.model_selection import cross_val_score
+from sklearn.metrics import ConfusionMatrixDisplay
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
 #%% set up filepath
 filepath = '/Users/Reese/Documents/Research Projects/random/amath582/hw3data/'
@@ -87,7 +91,7 @@ plot_digits(first_digit_all16modes, 4, "First Digit (1 to 16 PC Modes)")
 # initialize array to store cumulative energy at each PCA mode
 cum_E = np.zeros((xtrain.shape[1],))
 
-# calculate cumulative energy for each PCA mode3
+# calculate cumulative energy for each PCA mode
 for i in range(0,100):
     pca = PCA(n_components=i)
     pca.fit(xtrain)
@@ -132,7 +136,7 @@ def digit_subset(digit, xtrain, ytrain_labels, xtest, ytest_labels):
     return xsubtrain, ysubtrain, xsubtest, ysubtest
 
 #%% task 4: select the digits 1 and 8, project the data onto k-PC modes
-# computed in steps 1-2, and apply the Ridge classifier (linear) to distinguish
+# computed in steps 1-2, and apply the ridge classifier (linear) to distinguish
 # between these two digits. Perform cross-validation and testing.
 
 # subset for 1 and 8
@@ -150,10 +154,206 @@ pca = PCA(n_components=k) # create PCA basis with k modes
 xsubtrain_pca = pca.fit_transform(xsubtrain) # fit and transform training data to PCA space
 xsubtest_pca = pca.transform(xsubtest) # transform test data to PCA space
 
+# apply the ridge classifier
+RidgeCL = RidgeClassifierCV()
+RidgeCL.fit(xsubtrain_pca, ysubtrain)
 
+print("Training Score: {}".format(RidgeCL.score(xsubtrain_pca, ysubtrain)))
+print("Testing Score: {}".format(RidgeCL.score(xsubtest_pca, ysubtest)))
 
+# do cross validation
+scores = cross_val_score(RidgeCL, xsubtrain_pca, ysubtrain, cv=10)
+print("%0.2f accuracy with a standard deviation of %0.2f" % (scores.mean(), scores.std()))
 
+# evaluate results by plotting confusion matrix
+ysubpred = RidgeCL.predict(xsubtest_pca)
 
+fig, ax = plt.subplots(figsize=(10, 5), dpi = 200)
+ConfusionMatrixDisplay.from_predictions(ysubtest, ysubpred, ax=ax)
+ax.set_title("Confusion Matrix for RidgeClassifierCV Digit Classification")
+
+#%% task 5: repeat the same classification procedure for pairs of digits 3, 8
+# and 2, 7. Report your results and compare them with the results in step 4,
+# explaining the differences.
+
+# for 3 and 8
+# subset for 3 and 8
+xsubtrain3, ysubtrain3, xsubtest3, ysubtest3 = digit_subset(3, xtrain, ytrain_labels, xtest, ytest_labels)
+xsubtrain8, ysubtrain8, xsubtest8, ysubtest8 = digit_subset(8, xtrain, ytrain_labels, xtest, ytest_labels)
+
+# stack the 3 and 8 data
+xsubtrain = np.vstack((xsubtrain3, xsubtrain8))
+ysubtrain = np.hstack((ysubtrain3, ysubtrain8))
+xsubtest = np.vstack((xsubtest3, xsubtest8))
+ysubtest = np.hstack((ysubtest3, ysubtest8))
+
+# perform PCA with k modes (59)
+pca = PCA(n_components=k) # create PCA basis with k modes
+xsubtrain_pca = pca.fit_transform(xsubtrain) # fit and transform training data to PCA space
+xsubtest_pca = pca.transform(xsubtest) # transform test data to PCA space
+
+# apply the ridge classifier
+RidgeCL = RidgeClassifierCV()
+RidgeCL.fit(xsubtrain_pca, ysubtrain)
+
+print("Training Score: {}".format(RidgeCL.score(xsubtrain_pca, ysubtrain)))
+print("Testing Score: {}".format(RidgeCL.score(xsubtest_pca, ysubtest)))
+
+# do cross validation
+scores = cross_val_score(RidgeCL, xsubtrain_pca, ysubtrain, cv=10)
+print("%0.2f accuracy with a standard deviation of %0.2f" % (scores.mean(), scores.std()))
+
+# evaluate results by plotting confusion matrix
+ysubpred = RidgeCL.predict(xsubtest_pca)
+
+fig, ax = plt.subplots(figsize=(10, 5), dpi = 200)
+ConfusionMatrixDisplay.from_predictions(ysubtest, ysubpred, ax=ax)
+ax.set_title("Confusion Matrix for RidgeClassifierCV Digit Classification")
+
+# for 2 and 7
+# subset for 2 and 7
+xsubtrain2, ysubtrain2, xsubtest2, ysubtest2 = digit_subset(2, xtrain, ytrain_labels, xtest, ytest_labels)
+xsubtrain7, ysubtrain7, xsubtest7, ysubtest7 = digit_subset(7, xtrain, ytrain_labels, xtest, ytest_labels)
+
+# stack the 2 and 7 data
+xsubtrain = np.vstack((xsubtrain2, xsubtrain7))
+ysubtrain = np.hstack((ysubtrain2, ysubtrain7))
+xsubtest = np.vstack((xsubtest2, xsubtest7))
+ysubtest = np.hstack((ysubtest2, ysubtest7))
+
+# perform PCA with k modes (59)
+pca = PCA(n_components=k) # create PCA basis with k modes
+xsubtrain_pca = pca.fit_transform(xsubtrain) # fit and transform training data to PCA space
+xsubtest_pca = pca.transform(xsubtest) # transform test data to PCA space
+
+# apply the ridge classifier
+RidgeCL = RidgeClassifierCV()
+RidgeCL.fit(xsubtrain_pca, ysubtrain)
+
+print("Training Score: {}".format(RidgeCL.score(xsubtrain_pca, ysubtrain)))
+print("Testing Score: {}".format(RidgeCL.score(xsubtest_pca, ysubtest)))
+
+# do cross validation
+scores = cross_val_score(RidgeCL, xsubtrain_pca, ysubtrain, cv=10)
+print("%0.2f accuracy with a standard deviation of %0.2f" % (scores.mean(), scores.std()))
+
+# evaluate results by plotting confusion matrix
+ysubpred = RidgeCL.predict(xsubtest_pca)
+
+fig, ax = plt.subplots(figsize=(10, 5), dpi = 200)
+ConfusionMatrixDisplay.from_predictions(ysubtest, ysubpred, ax=ax)
+ax.set_title("Confusion Matrix for RidgeClassifierCV Digit Classification")
+
+#%% step 6: use all the digits and perform multiclass classification with
+# ridge, KNN, and LDA classifiers. Report your results and discuss how they
+# compare between the methods. Which method performs the best?
+
+# perform PCA with k modes (59)
+pca = PCA(n_components=k) # create PCA basis with k modes
+xtrain_pca = pca.fit_transform(xtrain) # fit and transform training data to PCA space
+xtest_pca = pca.transform(xtest) # transform test data to PCA space
+
+# ridge classification
+# apply the ridge classifier
+RidgeCL = RidgeClassifierCV()
+RidgeCL.fit(xtrain_pca, ytrain_labels)
+
+print("Training Score: {}".format(RidgeCL.score(xtrain_pca, ytrain_labels)))
+print("Testing Score: {}".format(RidgeCL.score(xtest_pca, ytest_labels)))
+
+# do cross validation
+scores = cross_val_score(RidgeCL, xtrain_pca, ytrain_labels, cv=10)
+print("%0.2f accuracy with a standard deviation of %0.2f" % (scores.mean(), scores.std()))
+
+# evaluate results by plotting confusion matrix
+ytest_pred = RidgeCL.predict(xtest_pca)
+
+fig, ax = plt.subplots(figsize=(10, 5), dpi = 200)
+ConfusionMatrixDisplay.from_predictions(ytest_labels, ytest_pred, ax=ax)
+ax.set_title("Confusion Matrix for RidgeClassifierCV Digit Classification")
+#%%
+# KNN classification
+# apply the KNN classifier
+KNNCL = KNeighborsClassifier(n_neighbors=3)
+KNNCL.fit(xtrain_pca,ytrain_labels)
+    
+training_score = KNNCL.score(xtrain_pca, ytrain_labels)
+testing_score = KNNCL.score(xtest_pca, ytest_labels)
+print("Training Score: {}".format(training_score))
+print("Testing Score: {}".format(testing_score))
+
+# do cross validation
+scores = cross_val_score(KNNCL, xtrain_pca, ytrain_labels, cv=10)
+cv_mean = scores.mean()
+cv_std = scores.std()
+print("%0.2f accuracy with a standard deviation of %0.2f" % (cv_mean, cv_std))
+ 
+ytest_pred = KNNCL.predict(xtest_pca)
+ 
+fig, ax = plt.subplots(figsize=(10, 5), dpi = 200)
+ConfusionMatrixDisplay.from_predictions(ytest_labels, ytest_pred, ax=ax)
+ax.set_title("Confusion Matrix for KNeighborsClassifier Digit Classification (k = 3)")
+
+#%% test different k for kNN classifier
+def knn_classifier(k, xtrain_pca, ytrain_labels, xtest_pca, ytest_labels):
+    KNNCL = KNeighborsClassifier(n_neighbors=k)
+    KNNCL.fit(xtrain_pca,ytrain_labels)
+        
+    training_score = KNNCL.score(xtrain_pca, ytrain_labels)
+    testing_score = KNNCL.score(xtest_pca, ytest_labels)
+    print("Training Score: {}".format(training_score))
+    print("Testing Score: {}".format(testing_score))
+    
+    # do cross validation
+    scores = cross_val_score(KNNCL, xtrain_pca, ytrain_labels, cv=10)
+    cv_mean = scores.mean()
+    cv_std = scores.std()
+    print("%0.2f accuracy with a standard deviation of %0.2f" % (cv_mean, cv_std))
+    
+    return training_score, testing_score, cv_mean, cv_std
+    
+# preallocate to store data
+ks = range(1, 6)
+training_scores = np.zeros(len(ks))
+testing_scores = np.zeros(len(ks))
+cv_means = np.zeros(len(ks))
+cv_stds = np.zeros(len(ks))
+
+# run knn for various k
+i = 0
+for k in ks:
+    training_scores[i], testing_scores[i], cv_means[i], cv_stds[i] = knn_classifier(k, xtrain_pca, ytrain_labels, xtest_pca, ytest_labels)
+    i += 1
+
+# plot results of various k
+fig = plt.figure(figsize=(10, 5), dpi = 200)
+ax = fig.gca()
+ax.plot(list(ks), training_scores, label='Train Data Score')
+ax.plot(list(ks), testing_scores, label='Test Data Score')
+ax.errorbar(list(ks), cv_means, yerr=cv_stds, label='Cross-Validation Mean')
+ax.set_title('Evaluation of k Nearest Neighbors')
+ax.set_xlabel('Number of Neighbors (k)')
+ax.set_ylabel('Accuracy Score')
+ax.legend()
+
+#%% LDA classification
+# apply the LDA classifier
+LDACL = LinearDiscriminantAnalysis()
+LDACL.fit(xtrain_pca, ytrain_labels)
+
+print("Training Score: {}".format(LDACL.score(xtrain_pca, ytrain_labels)))
+print("Testing Score: {}".format(LDACL.score(xtest_pca, ytest_labels)))
+
+# do cross validation
+scores = cross_val_score(LDACL, xtrain_pca, ytrain_labels, cv=10)
+print("%0.2f accuracy with a standard deviation of %0.2f" % (scores.mean(), scores.std()))
+
+# evaluate results by plotting confusion matrix
+ytest_pred = LDACL.predict(xtest_pca)
+
+fig, ax = plt.subplots(figsize=(10, 5), dpi = 200)
+ConfusionMatrixDisplay.from_predictions(ytest_labels, ytest_pred, ax=ax)
+ax.set_title("Confusion Matrix for LinearDiscriminantAnalysis Digit Classification")
 
 
 
