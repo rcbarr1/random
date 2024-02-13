@@ -60,7 +60,7 @@ pca = PCA(n_components=16)
 xtrain_pca = pca.fit_transform(xtrain)
 xtrain_xyz = pca.inverse_transform((xtrain_pca))
 
-# plot first 64 training digits in regular space and a
+# plot first 64 training digits in regular space
 def plot_digits(XX, N, title):
     fig, ax = plt.subplots(N, N, figsize=(8, 8))
     XX = XX.transpose()
@@ -72,6 +72,10 @@ def plot_digits(XX, N, title):
 
 plot_digits(xtrain, 8, "First 64 Training Images (Unmodified)" )
 plot_digits(xtrain_xyz, 8, "First 64 Training Images (16 PC Modes)" )
+
+# plot 16 PCA modes
+modes_xyz = pca.inverse_transform(np.transpose(pca.components_))
+plot_digits(pca.components_, 4, "First 16 PC Modes")
 
 # calculate first 16 PCA modes of each digit
 xtrain_xyz_all16modes = np.zeros((xtrain.shape[0], xtrain.shape[1], 16)) # preallocate array to hold results of all 16 PCA modes
@@ -105,10 +109,15 @@ ax.plot(cum_E,linewidth=2)
 ax.set_ylabel('Cumulative Energy ($\\Sigma E_j$)')
 ax.set_xlabel('Number of PCA Modes')
 ax.set_xlim([0,99])
-ax.legend(loc='lower right')
 
 # need 59 PCA modes to get to 85% cumulative energy
 k = 59
+
+# plot first 64 with k modes
+pca = PCA(n_components=k)
+xtrain_pca = pca.fit_transform(xtrain)
+xtrain_xyz = pca.inverse_transform((xtrain_pca))
+plot_digits(xtrain_xyz, 8, "First 64 Training Images (59 PC Modes)" )
 
 #%% task 3: write a function that selects a subset of particular digits (all
 # samples of them) and returns the subset as new matricies
@@ -169,8 +178,10 @@ print("%0.2f accuracy with a standard deviation of %0.2f" % (scores.mean(), scor
 ysubpred = RidgeCL.predict(xsubtest_pca)
 
 fig, ax = plt.subplots(figsize=(10, 5), dpi = 200)
-ConfusionMatrixDisplay.from_predictions(ysubtest, ysubpred, ax=ax)
-ax.set_title("Confusion Matrix for RidgeClassifierCV Digit Classification")
+disp = ConfusionMatrixDisplay.from_predictions(ysubtest, ysubpred, ax=ax)
+disp.im_.set_clim(0, 1000)
+ax.set_title("Confusion Matrix for RidgeClassifierCV Digit Classification (1, 8)")
+ax.legend()
 
 #%% task 5: repeat the same classification procedure for pairs of digits 3, 8
 # and 2, 7. Report your results and compare them with the results in step 4,
@@ -207,8 +218,9 @@ print("%0.2f accuracy with a standard deviation of %0.2f" % (scores.mean(), scor
 ysubpred = RidgeCL.predict(xsubtest_pca)
 
 fig, ax = plt.subplots(figsize=(10, 5), dpi = 200)
-ConfusionMatrixDisplay.from_predictions(ysubtest, ysubpred, ax=ax)
-ax.set_title("Confusion Matrix for RidgeClassifierCV Digit Classification")
+disp = ConfusionMatrixDisplay.from_predictions(ysubtest, ysubpred, ax=ax)
+disp.im_.set_clim(0, 1000)
+ax.set_title("Confusion Matrix for RidgeClassifierCV Digit Classification (3, 8)")
 
 # for 2 and 7
 # subset for 2 and 7
@@ -241,8 +253,9 @@ print("%0.2f accuracy with a standard deviation of %0.2f" % (scores.mean(), scor
 ysubpred = RidgeCL.predict(xsubtest_pca)
 
 fig, ax = plt.subplots(figsize=(10, 5), dpi = 200)
-ConfusionMatrixDisplay.from_predictions(ysubtest, ysubpred, ax=ax)
-ax.set_title("Confusion Matrix for RidgeClassifierCV Digit Classification")
+disp = ConfusionMatrixDisplay.from_predictions(ysubtest, ysubpred, ax=ax)
+disp.im_.set_clim(0, 1000)
+ax.set_title("Confusion Matrix for RidgeClassifierCV Digit Classification (2, 7)")
 
 #%% step 6: use all the digits and perform multiclass classification with
 # ridge, KNN, and LDA classifiers. Report your results and discuss how they
@@ -269,7 +282,8 @@ print("%0.2f accuracy with a standard deviation of %0.2f" % (scores.mean(), scor
 ytest_pred = RidgeCL.predict(xtest_pca)
 
 fig, ax = plt.subplots(figsize=(10, 5), dpi = 200)
-ConfusionMatrixDisplay.from_predictions(ytest_labels, ytest_pred, ax=ax)
+disp = ConfusionMatrixDisplay.from_predictions(ytest_labels, ytest_pred, ax=ax)
+disp.im_.set_clim(0, 1000)
 ax.set_title("Confusion Matrix for RidgeClassifierCV Digit Classification")
 #%%
 # KNN classification
@@ -291,7 +305,8 @@ print("%0.2f accuracy with a standard deviation of %0.2f" % (cv_mean, cv_std))
 ytest_pred = KNNCL.predict(xtest_pca)
  
 fig, ax = plt.subplots(figsize=(10, 5), dpi = 200)
-ConfusionMatrixDisplay.from_predictions(ytest_labels, ytest_pred, ax=ax)
+disp = ConfusionMatrixDisplay.from_predictions(ytest_labels, ytest_pred, ax=ax)
+disp.im_.set_clim(0, 1000)
 ax.set_title("Confusion Matrix for KNeighborsClassifier Digit Classification (k = 3)")
 
 #%% test different k for kNN classifier
@@ -352,7 +367,8 @@ print("%0.2f accuracy with a standard deviation of %0.2f" % (scores.mean(), scor
 ytest_pred = LDACL.predict(xtest_pca)
 
 fig, ax = plt.subplots(figsize=(10, 5), dpi = 200)
-ConfusionMatrixDisplay.from_predictions(ytest_labels, ytest_pred, ax=ax)
+disp = ConfusionMatrixDisplay.from_predictions(ytest_labels, ytest_pred, ax=ax)
+disp.im_.set_clim(0, 1000)
 ax.set_title("Confusion Matrix for LinearDiscriminantAnalysis Digit Classification")
 
 
