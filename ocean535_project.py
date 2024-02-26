@@ -11,6 +11,7 @@ defined in the dictionary below from 2003 to 2020.
 
 import xarray as xr
 import numpy as np
+from scipy import stats
 import matplotlib.pyplot as plt
 
 # open up dataset
@@ -45,16 +46,16 @@ regions = {
     }
 
 # define time slices for each year from 2003 to 2020
-year_starts = np.array(['2003-01-01', '2005-01-01', '2006-01-01', '2007-01-01',
-                        '2008-01-01', '2009-01-01', '2010-01-01', '2011-01-01',
-                        '2012-01-01', '2013-01-01', '2014-01-01', '2015-01-01',
-                        '2016-01-01', '2017-01-01', '2018-01-01', '2019-01-01',
-                        '2020-01-01'],dtype='datetime64')
-year_ends = np.array(['2003-12-01', '2005-12-01', '2006-12-01', '2007-12-01',
-                      '2008-12-01', '2009-12-01', '2010-12-01', '2011-12-01',
-                      '2012-12-01', '2013-12-01', '2014-12-01', '2015-12-01',
-                      '2016-12-01', '2017-12-01', '2018-12-01', '2019-12-01',
-                      '2020-12-01'],dtype='datetime64')
+year_starts = np.array(['2003-01-01', '2004-01-01', '2005-01-01', '2006-01-01',
+                        '2007-01-01', '2008-01-01', '2009-01-01', '2010-01-01',
+                        '2011-01-01', '2012-01-01', '2013-01-01', '2014-01-01',
+                        '2015-01-01', '2016-01-01', '2017-01-01', '2018-01-01',
+                        '2019-01-01', '2020-01-01'],dtype='datetime64')
+year_ends = np.array(['2003-12-01', '2004-12-01', '2005-12-01', '2006-12-01',
+                      '2007-12-01', '2008-12-01', '2009-12-01', '2010-12-01',
+                      '2011-12-01', '2012-12-01', '2013-12-01', '2014-12-01',
+                      '2015-12-01', '2016-12-01', '2017-12-01', '2018-12-01',
+                      '2019-12-01', '2020-12-01'],dtype='datetime64')
 
 # preallocate array to store annual means for each region
 annual_means = np.zeros((len(regions),len(year_starts)))
@@ -104,9 +105,87 @@ ax.set_ylabel('Temperature (ºC)')
 ax.set_title('Sea Surface Temperature in Arctic Regions (2003 - 2020)')
 plt.legend(bbox_to_anchor=(0.5, -.30), loc='lower center', ncols=3)
 
+#%% next steps: change from plot to scatter, do linear regressions for each and find slopes
+# figure out some statistical test to compare trends
+
+# calculate slopes and intercepts for each region
+# preallocate array to store annual means for each region
+regress_data = np.zeros((len(regions)+1,3))
+
+# create array of integer years
+years = np.array([2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013,
+         2014, 2015, 2016, 2017, 2018, 2019, 2020])
+
+# loop through each region
+i = 0
+for key in regions:
+    slope, intercept, rvalue, pvalue, stderr = stats.linregress(years, annual_means[i,:], alternative='two-sided')
+    regress_data[i, 0] = slope
+    regress_data[i, 1] = intercept
+    regress_data[i, 2] = pvalue
+    i += 1
+
+# do for average
+slope, intercept, rvalue, pvalue, stderr = stats.linregress(years, np.mean(annual_means,axis=0), alternative='two-sided')
+regress_data[9, 0] = slope
+regress_data[9, 1] = intercept
+regress_data[9, 2] = pvalue
 
 
+#%%
+# plot all subplots
+fig, axs = plt.subplots(5,2, figsize=(10,7), layout='constrained', sharex=True, sharey=True, dpi=200)
+axs[0,0].scatter(years, annual_means[0,:],label='Eurasian Arctic')
+axs[0,0].set_title('Eurasian Arctic', loc='left')
+axs[0,0].plot(years, regress_data[0,1] + regress_data[0,0] * years, color="firebrick", lw=1, ls='--')
+axs[0,0].set_ylim([-5, 25])
+axs[0,0].text(0.42, 0.8, '$y={:.3f}x+{:.2f}$, p-value={:.3f}'.format(regress_data[0,0],regress_data[0,1],regress_data[0,2]), transform=axs[0,0].transAxes)
 
+axs[0,1].scatter(years, annual_means[1,:],label='Amerasian Arctic')
+axs[0,1].set_title('Amerasian Arctic', loc='left')
+axs[0,1].plot(years, regress_data[1,1] + regress_data[1,0] * years, color="firebrick", lw=1, ls='--')
+axs[0,1].text(0.42, 0.8, '$y={:.3f}x+{:.2f}$, p-value={:.3f}'.format(regress_data[1,0],regress_data[1,1],regress_data[1,2]), transform=axs[0,1].transAxes)
 
+axs[1,0].scatter(years, annual_means[2,:],label='Sea of Okhotsk')
+axs[1,0].set_title('Sea of Okhotsk', loc='left')
+axs[1,0].plot(years, regress_data[2,1] + regress_data[2,0] * years, color="firebrick", lw=1, ls='--')
+axs[1,0].text(0.42, 0.8, '$y={:.3f}x+{:.2f}$, p-value={:.3f}'.format(regress_data[2,0],regress_data[2,1],regress_data[2,2]), transform=axs[1,0].transAxes)
 
+axs[1,1].scatter(years, annual_means[3,:],label='Bering Sea')
+axs[1,1].set_title('Bering Sea', loc='left')
+axs[1,1].plot(years, regress_data[3,1] + regress_data[3,0] * years, color="firebrick", lw=1, ls='--')
+axs[1,1].text(0.42, 0.8, '$y={:.3f}x+{:.2f}$, p-value={:.3f}'.format(regress_data[3,0],regress_data[3,1],regress_data[3,2]), transform=axs[1,1].transAxes)
 
+axs[2,0].scatter(years, annual_means[4,:],label='Barents Sea')
+axs[2,0].set_title('Barents Sea', loc='left')
+axs[2,0].plot(years, regress_data[4,1] + regress_data[4,0] * years, color="firebrick", lw=1, ls='--')
+axs[2,0].text(0.42, 0.8, '$y={:.3f}x+{:.2f}$, p-value={:.3f}'.format(regress_data[4,0],regress_data[4,1],regress_data[4,2]), transform=axs[2,0].transAxes)
+
+axs[2,1].scatter(years, annual_means[5,:],label='Greenland Sea')
+axs[2,1].set_title('Greenland Sea', loc='left')
+axs[2,1].plot(years, regress_data[5,1] + regress_data[5,0] * years, color="firebrick", lw=1, ls='--')
+axs[2,1].text(0.42, 0.8, '$y={:.3f}x+{:.2f}$, p-value={:.3f}'.format(regress_data[5,0],regress_data[5,1],regress_data[5,2]), transform=axs[2,1].transAxes)
+
+axs[3,0].scatter(years, annual_means[6,:],label='Hudson Bay')
+axs[3,0].set_title('Hudson Bay', loc='left')
+axs[3,0].plot(years, regress_data[6,1] + regress_data[6,0] * years, color="firebrick", lw=1, ls='--')
+axs[3,0].text(0.42, 0.8, '$y={:.3f}x+{:.2f}$, p-value={:.3f}'.format(regress_data[6,0],regress_data[6,1],regress_data[6,2]), transform=axs[3,0].transAxes)
+
+axs[3,1].scatter(years, annual_means[7,:],label='Baffin Bay/Labrador Sea')
+axs[3,1].set_title('Baffin Bay/Labrador Sea', loc='left')
+axs[3,1].plot(years, regress_data[7,1] + regress_data[7,0] * years, color="firebrick", lw=1, ls='--')
+axs[3,1].text(0.42, 0.8, '$y={:.3f}x+{:.2f}$, p-value={:.3f}'.format(regress_data[7,0],regress_data[7,1],regress_data[7,2]), transform=axs[3,1].transAxes)
+
+axs[4,0].scatter(years, annual_means[8,:],label='North Atlantic')
+axs[4,0].set_title('North Atlantic', loc='left')
+axs[4,0].plot(years, regress_data[8,1] + regress_data[8,0] * years, color="firebrick", lw=1, ls='--')
+axs[4,0].text(0.42, 0.8, '$y={:.3f}x+{:.2f}$, p-value={:.3f}'.format(regress_data[8,0],regress_data[8,1],regress_data[8,2]), transform=axs[4,0].transAxes)
+
+axs[4,1].scatter(years, np.mean(annual_means,axis=0),label='Average of Nine Regions')
+axs[4,1].set_title('Average of Nine Regions', loc='left')
+axs[4,1].plot(years, regress_data[9,1] + regress_data[9,0] * years, color="firebrick", lw=1, ls='--')
+axs[4,1].text(0.42, 0.8, '$y={:.3f}x+{:.2f}$, p-value={:.3f}'.format(regress_data[9,0],regress_data[9,1],regress_data[9,2]), transform=axs[4,1].transAxes)
+
+plt.xticks(years[0::2])
+fig.supxlabel('Year')
+fig.supylabel('Temperature (ºC)')
