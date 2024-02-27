@@ -17,6 +17,7 @@ from torch.utils.data import Subset, DataLoader
 import tqdm
 import seaborn as sns
 import time
+import scipy.io
 
 #%% load and set up data
 # download and normalize fashionMNIST dataset
@@ -140,8 +141,8 @@ class fashionFCN(torch.nn.Module):
 # initialize neural network model with input, output, and hidden layer dimensions
 model = fashionFCN(num_layers = 4, layer_dim = [784, 50, 50, 20, 10])
 # define the learning rate and number of epochs
-learning_rate = 0.3
-epochs = 30
+learning_rate = 0.1
+epochs = 50
 
 # initialize arrays to store loss and accuracy
 train_loss_list = np.zeros((epochs,))
@@ -225,13 +226,13 @@ plt.figure(figsize = (8, 5), dpi=200)
 plt.subplot(2, 1, 1)
 plt.plot(train_loss_list*100, linewidth = 3)
 plt.ylabel("Training Loss (%)")
-plt.xlim([0,30])
+plt.xlim([0,50])
 
 plt.subplot(2, 1, 2)
 plt.plot(validation_accuracy_list *100, linewidth = 3, color = 'gold')
 plt.ylabel("Validation Accuracy (%)")
 plt.xlabel("Epochs")
-plt.xlim([0,30])
+plt.xlim([0,50])
 sns.despine()
 
 #%% task 2: find a configuration of the FCN that trains in reasonable time and
@@ -242,9 +243,9 @@ sns.despine()
 # number of training batches = 106
 # number of layers = 4
 # number of neurons in each layer = [784, 50, 40, 20, 10]
-# learning rate = 0.3
-# epochs = 30
-# time elapsed: approximately 
+# learning rate = 0.1
+# epochs = 50
+# time elapsed: approximately 7 minutes
 
 
 #%% task 3: perform hyperparameter tuning from the baseline, trying the
@@ -264,8 +265,9 @@ sns.despine()
 # initialize neural network model with input, output, and hidden layer dimensions
 model = fashionFCN(num_layers = 4, layer_dim = [784, 50, 50, 20, 10])
 # define the learning rate and number of epochs
-learning_rate = [0.05, 0.10, 0.20]
-epochs = 30
+learning_rate = [0.005, 0.0025, 0.005]
+#learning_rate = [0.05, 0.10, 0.20]
+epochs = 50
 
 # initialize arrays to store loss and accuracy
 train_loss_list = np.zeros((epochs,len(learning_rate)))
@@ -273,16 +275,14 @@ validation_accuracy_list = np.zeros((epochs,len(learning_rate)))
 test_accuracy = np.zeros(len(learning_rate))
 test_std = np.zeros(len(learning_rate))
 
-
-
 for j in range(len(learning_rate)):
     # iterate over epochs, batches with progress bar and train/validate fashionFCN
     # define loss function and optimizer
     loss_func = torch.nn.CrossEntropyLoss() # cross entropy loss
-    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate[j]) # SGD optimizer
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate[j]) # select optimizer (SGD, RMSprop, Adam)
     tic = time.time()
     for epoch in tqdm.trange(epochs):
-        
+            
         # fashionFCN TRAINING
         for train_features, train_labels in train_batches: 
             model.train() # set model in training mode
@@ -349,21 +349,23 @@ for j in range(len(learning_rate)):
 #%% plot results
 # plot training loss and validation accuracy throughout the training epochs
 plt.figure(figsize = (5, 5), dpi=200)
-labels = ['0.05', '0.10', '0.20']
+labels = ['0.0010', '0.0025', '0.0050']
+#labels = ['0.05', '0.10', '0.20']
 
 plt.subplot(2, 1, 1)
 plt.plot(train_loss_list*100, linewidth = 3)
 plt.ylabel("Training Loss (%)")
-plt.xlim([0,30])
+plt.xlim([0,50])
+#plt.ylim([0,100])
 plt.legend(labels=labels)
 
 plt.subplot(2, 1, 2)
 plt.plot(validation_accuracy_list*100, linewidth = 3)
 plt.ylabel("Validation Accuracy (%)")
 plt.xlabel("Epochs")
-plt.xlim([0,30])
+plt.xlim([0,50])
+#plt.ylim([0,100])
 sns.despine()
-
 
 
 
