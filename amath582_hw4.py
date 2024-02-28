@@ -96,7 +96,7 @@ plot_images(xtrain.data[:64], 8, 'First 64 Training Images')
 # - TOTAL 5 HYPERPARAMETERS: # training batches, # layers, # neurons in each
 #   layer, learning rate, # epochs
 
-# define your (as cool as it gets) fully connected neural network
+# define your fully connected neural network
 class fashionFCN(torch.nn.Module):
     
     # initialize model layers, add additional arguments to adjust
@@ -248,20 +248,12 @@ sns.despine()
 # time elapsed: approximately 7 minutes
 
 
-#%% task 3: perform hyperparameter tuning from the baseline, trying the
+#%% task 3a: perform hyperparameter tuning from the baseline, trying the
 # following configurations
 # a: consider different optimizers (RMSProp Adam, SGD) with different learning rates
 #    - log training loss, validation, and test accuracy
 #    - compare these optimizers, observe which is most suitable, try to explain
-# b: analyze the overfitting/underfitting situation of your model
-#    - include dropout regularization, discuss if this improves performance
-# c: consider different initializations (random normal, xavier normal, kaiming
-#    he uniform), discuss how they affect training process and accuracy
-# d: include normalization such as batch normalization, discuss how it affects
-#    training process and accuracy
 
-
-# PART 3.a ####################################################################
 # initialize neural network model with input, output, and hidden layer dimensions
 model = fashionFCN(num_layers = 4, layer_dim = [784, 50, 50, 20, 10])
 # define the learning rate and number of epochs
@@ -346,7 +338,7 @@ for j in range(len(learning_rate)):
 
     print('Test Data Accuracy: ' + str(test_accuracy*100) + ' ± ' + str(test_std*100) + '%\n')
 
-#%% plot results
+# plot results
 # plot training loss and validation accuracy throughout the training epochs
 plt.figure(figsize = (5, 5), dpi=200)
 labels = ['0.0010', '0.0025', '0.0050']
@@ -367,7 +359,487 @@ plt.xlim([0,50])
 #plt.ylim([0,100])
 sns.despine()
 
+#scipy.io.savemat('hw4task3adata.mat', {'adam_test_accuracy' : adam_test_accuracy,
+#                                       'adam_test_std' : adam_test_std,
+#                                       'adam_train_loss_list' : adam_train_loss_list,
+#                                       'adam_validation_accuracy_list' : adam_validation_accuracy_list,
+#                                       'rmsprop_test_accuracy' : rmsprop_test_accuracy,
+#                                       'rmsprop_test_std' : rmsprop_test_std,
+#                                       'rmsprop_train_loss_list' : rmsprop_train_loss_list,
+#                                       'rmsprop_validation_accuracy_list' : rmsprop_validation_accuracy_list,
+#                                       'sgd_test_accuracy' : sgd_test_accuracy,
+#                                       'sgd_test_std' : sgd_test_std,
+#                                       'sgd_train_loss_list' : sgd_train_loss_list,
+#                                       'sgd_validation_accuracy_list' : sgd_validation_accuracy_list})
 
 
+#%% task 3b: perform hyperparameter tuning from the baseline, trying the
+# following configurations
+# b: analyze the overfitting/underfitting situation of your model
+#    - include dropout regularization, discuss if this improves performance
 
+# define your fully connected neural network
+class fashionFCNdropout(torch.nn.Module):
+    
+    # initialize model layers, add additional arguments to adjust
+    def __init__(self, num_layers, layer_dim, dropout_p):
+        # num_layers = integer number of layers in model (including input and
+        #              output layer)
+        # layer_dim = array of length num_layers + 1 that defines the number of
+        #             input and output connections of the corresponding layers
+        # dropout_p = percentage of data that is dropped out in dropout regularization
+        
+        # define network layer(s)
+        super(fashionFCNdropout,self).__init__()
+        
+        self.num_layers = num_layers
+        self.dropout = torch.nn.Dropout(dropout_p)
+        for i in range(num_layers):
+            setattr(self, f'layer{i+1}', torch.nn.Linear(layer_dim[i], layer_dim[i+1]))
+    
+    def forward(self, input):
+        # perform dropout
+        input = self.dropout(input)
+       
+        # define activation function(s) and how model propagates through
+        # network for each output layer
+        
+        # models with more than one layer
+        if self.num_layers > 1:
+            # get output of layer 1
+            output = torch.nn.functional.relu(self.layer1(input))
+            
+            # propagate through layers 2 - num_layers - 1
+            for i in range(2, self.num_layers):
+                current_layer = getattr(self, f'layer{i}')
+                output = torch.nn.functional.relu(current_layer(output))
+                
+            # propagate through final layer, do not do activation function here
+            current_layer = getattr(self, f'layer{i+1}')
+            output = current_layer(output)
+            
+        # special case: models with only one layer
+        elif self.num_layers == 1:
+            output = self.layer1(input) 
+            
+        return output
 
+# initialize neural network model with input, output, and hidden layer dimensions
+model = fashionFCNdropout(num_layers = 4, layer_dim = [784, 50, 50, 20, 10], dropout_p = 0.0)
+# define the learning rate and number of epochs
+learning_rate = 0.001
+epochs = 50
+
+# initialize arrays to store loss and accuracy
+train_loss_list = np.zeros((epochs,))
+validation_accuracy_list = np.zeros((epochs,))
+# define loss function and optimizer
+loss_func = torch.nn.CrossEntropyLoss() # cross entropy loss
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate) # SGD optimizer
+
+# iterate over epochs, batches with progress bar and train/validate fashionFCNdropout
+tic = time.time()
+for epoch in tqdm.trange(epochs):
+    
+    # fashionFCN TRAINING
+    for train_features, train_labels in train_batches: 
+        model.train() # set model in training mode
+        train_features = train_features.reshape(-1, 28*28) # reshape images into a vector
+        optimizer.zero_grad() # reset gradients
+        train_outputs = model(train_features) # call model
+        loss = loss_func(train_outputs, train_labels) # calculate training loss on model
+        
+        # perform optimization, back propagation
+        loss.backward()
+        optimizer.step()
+        
+    # record loss for the epoch
+    train_loss_list[epoch] = loss.item()
+    
+    # VALIDATION
+    # initialize array to store accuracy for all batches in each epoch
+    all_val_accuracies = np.zeros(len(val_batches))
+    i = 0
+    for val_features, val_labels in val_batches:
+        
+        # tell pytorch to not pass inputs to the network for training purposes
+        with torch.no_grad():
+            model.eval()
+            val_features = val_features.reshape(-1, 28*28) # reshape validation images into a vector
+            
+            # compute validation targets and accuracy
+            val_outputs = model(val_features)
+            correct = (torch.argmax(val_outputs, dim=1) == val_labels).type(torch.FloatTensor)
+            all_val_accuracies[i] = correct.mean()
+            i+=1
+            
+    # record accuracy for the epoch
+    validation_accuracy_list[epoch] = all_val_accuracies.mean()
+    
+    # print training loss, validation accuracy
+    print("\nEpoch: "+ str(epoch) +"; Training Loss: " + str(train_loss_list[epoch]*100) + '%')
+    print("Epoch: "+ str(epoch) +"; Validation Accuracy: " + str(validation_accuracy_list[epoch]*100) + '%\n')
+
+print('Time Elapsed: ' + str(time.time() - tic))
+
+# TESTING
+# initialize array to store accuracy for all batches in each epoch
+all_test_accuracies = np.zeros(len(test_batches))
+i = 0
+# tell pytorch to not pass inputs to network for training purposes
+with torch.no_grad():
+    for test_features, test_labels in test_batches:
+        model.eval()
+        test_features = test_features.reshape(-1, 28*28) # reshape test images into a vector
+
+        # compute test targets and accuracy
+        test_outputs = model(test_features)
+        correct = (torch.argmax(test_outputs, dim=1) == test_labels).type(torch.FloatTensor)
+        all_test_accuracies[i] = correct.mean()
+        i+=1
+
+# compute total (mean) accuracy and standard deviation
+test_accuracy = all_test_accuracies.mean()
+test_std = all_test_accuracies.std()
+
+print('Test Data Accuracy: ' + str(test_accuracy*100) + ' ± ' + str(test_std*100) + '%\n')
+
+# save training and testing data for plotting
+train_loss_list00 = train_loss_list
+validation_accuracy_list00 = validation_accuracy_list
+test_accuracy00 = test_accuracy
+test_std00 = test_std
+ 
+#%% plot training loss and validation accuracy throughout the training epochs
+plt.figure(figsize = (8, 5), dpi=200)
+
+plt.subplot(2, 1, 1)
+plt.plot(train_loss_list00*100, linewidth = 3, label = '$p = 0.0$')
+plt.plot(train_loss_list02*100, linewidth = 3, label = '$p = 0.2$')
+plt.plot(train_loss_list05*100, linewidth = 3, label = '$p = 0.5$')
+plt.ylabel("Training Loss (%)")
+plt.xlim([0,50])
+plt.ylim([0,100])
+plt.legend()
+
+plt.subplot(2, 1, 2)
+plt.plot(validation_accuracy_list00 *100, linewidth = 3, label = '$p = 0.0$')
+plt.plot(validation_accuracy_list02 *100, linewidth = 3, label = '$p = 0.2$')
+plt.plot(validation_accuracy_list05 *100, linewidth = 3, label = '$p = 0.5$')
+plt.ylabel("Validation Accuracy (%)")
+plt.xlabel("Epochs")
+plt.xlim([0,50])
+sns.despine()
+
+#%% task 3c: perform hyperparameter tuning from the baseline, trying the
+# following configurations
+# c: consider different initializations (random normal, xavier normal, kaiming
+#    he uniform), discuss how they affect training process and accuracy
+
+# define your fully connected neural network
+class fashionFCNinit(torch.nn.Module):
+    
+    # initialize model layers, add additional arguments to adjust
+    def __init__(self, num_layers, layer_dim):
+        # num_layers = integer number of layers in model (including input and
+        #              output layer)
+        # layer_dim = array of length num_layers + 1 that defines the number of
+        #             input and output connections of the corresponding layers
+        
+        # define network layer(s)
+        super(fashionFCN,self).__init__()
+        
+        self.num_layers = num_layers
+        for i in range(num_layers):
+            setattr(self, f'layer{i+1}', torch.nn.Linear(layer_dim[i], layer_dim[i+1]))
+            current_layer = getattr(self, f'layer{i+1}')
+            #torch.nn.init.normal_(current_layer.weight, mean=0, std=0.01)
+            #torch.nn.init.normal_(current_layer.bias, mean=0, std=0.01)
+            #torch.nn.init.xavier_normal_(current_layer.weight)
+            torch.nn.init.kaiming_normal_(current_layer.weight, mode='fan_in', nonlinearity='relu')
+            torch.nn.init.zeros_(current_layer.bias)
+    
+    def forward(self, input):
+       
+        # define activation function(s) and how model propagates through
+        # network for each output layer
+        
+        # models with more than one layer
+        if self.num_layers > 1:
+            # get output of layer 1
+            output = torch.nn.functional.relu(self.layer1(input))
+            
+            # propagate through layers 2 - num_layers - 1
+            for i in range(2, self.num_layers):
+                current_layer = getattr(self, f'layer{i}')
+                output = torch.nn.functional.relu(current_layer(output))
+                
+            # propagate through final layer, do not do activation function here
+            current_layer = getattr(self, f'layer{i+1}')
+            output = current_layer(output)
+            
+        # special case: models with only one layer
+        elif self.num_layers == 1:
+            output = self.layer1(input) 
+            
+        return output
+
+# initialize neural network model with input, output, and hidden layer dimensions
+model = fashionFCNdropout(num_layers = 4, layer_dim = [784, 50, 50, 20, 10], dropout_p = 0.0)
+# define the learning rate and number of epochs
+learning_rate = 0.001
+epochs = 50
+
+# initialize arrays to store loss and accuracy
+train_loss_list = np.zeros((epochs,))
+validation_accuracy_list = np.zeros((epochs,))
+# define loss function and optimizer
+loss_func = torch.nn.CrossEntropyLoss() # cross entropy loss
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate) # SGD optimizer
+
+# iterate over epochs, batches with progress bar and train/validate fashionFCNdropout
+tic = time.time()
+for epoch in tqdm.trange(epochs):
+    
+    # fashionFCN TRAINING
+    for train_features, train_labels in train_batches: 
+        model.train() # set model in training mode
+        train_features = train_features.reshape(-1, 28*28) # reshape images into a vector
+        optimizer.zero_grad() # reset gradients
+        train_outputs = model(train_features) # call model
+        loss = loss_func(train_outputs, train_labels) # calculate training loss on model
+        
+        # perform optimization, back propagation
+        loss.backward()
+        optimizer.step()
+        
+    # record loss for the epoch
+    train_loss_list[epoch] = loss.item()
+    
+    # VALIDATION
+    # initialize array to store accuracy for all batches in each epoch
+    all_val_accuracies = np.zeros(len(val_batches))
+    i = 0
+    for val_features, val_labels in val_batches:
+        
+        # tell pytorch to not pass inputs to the network for training purposes
+        with torch.no_grad():
+            model.eval()
+            val_features = val_features.reshape(-1, 28*28) # reshape validation images into a vector
+            
+            # compute validation targets and accuracy
+            val_outputs = model(val_features)
+            correct = (torch.argmax(val_outputs, dim=1) == val_labels).type(torch.FloatTensor)
+            all_val_accuracies[i] = correct.mean()
+            i+=1
+            
+    # record accuracy for the epoch
+    validation_accuracy_list[epoch] = all_val_accuracies.mean()
+    
+    # print training loss, validation accuracy
+    print("\nEpoch: "+ str(epoch) +"; Training Loss: " + str(train_loss_list[epoch]*100) + '%')
+    print("Epoch: "+ str(epoch) +"; Validation Accuracy: " + str(validation_accuracy_list[epoch]*100) + '%\n')
+
+print('Time Elapsed: ' + str(time.time() - tic))
+
+# TESTING
+# initialize array to store accuracy for all batches in each epoch
+all_test_accuracies = np.zeros(len(test_batches))
+i = 0
+# tell pytorch to not pass inputs to network for training purposes
+with torch.no_grad():
+    for test_features, test_labels in test_batches:
+        model.eval()
+        test_features = test_features.reshape(-1, 28*28) # reshape test images into a vector
+
+        # compute test targets and accuracy
+        test_outputs = model(test_features)
+        correct = (torch.argmax(test_outputs, dim=1) == test_labels).type(torch.FloatTensor)
+        all_test_accuracies[i] = correct.mean()
+        i+=1
+
+# compute total (mean) accuracy and standard deviation
+test_accuracy = all_test_accuracies.mean()
+test_std = all_test_accuracies.std()
+
+print('Test Data Accuracy: ' + str(test_accuracy*100) + ' ± ' + str(test_std*100) + '%\n')
+
+# save training and testing data for plotting
+kaiming_train_loss_list = train_loss_list
+kaiming_validation_accuracy_list = validation_accuracy_list
+kaiming_test_accuracy = test_accuracy
+kaiming_test_std = test_std
+
+#%% plot training loss and validation accuracy throughout the training epochs
+plt.figure(figsize = (8, 5), dpi=200)
+
+plt.subplot(2, 1, 1)
+plt.plot(normal_train_loss_list*100, linewidth = 3, label = 'Random Normal')
+plt.plot(xavier_train_loss_list*100, linewidth = 3, label = 'Xavier Normal')
+plt.plot(kaiming_train_loss_list*100, linewidth = 3, label = 'Kaiming (he) Uniform')
+plt.ylabel("Training Loss (%)")
+plt.xlim([0,50])
+plt.ylim([0,100])
+plt.legend()
+
+plt.subplot(2, 1, 2)
+plt.plot(normal_validation_accuracy_list*100, linewidth = 3, label = 'Random Normal')
+plt.plot(xavier_validation_accuracy_list*100, linewidth = 3, label = 'Xavier Normal')
+plt.plot(kaiming_validation_accuracy_list*100, linewidth = 3, label = 'Kaiming (he) Uniform')
+plt.ylabel("Validation Accuracy (%)")
+plt.xlabel("Epochs")
+plt.xlim([0,50])
+sns.despine()
+
+#%% task 3d: perform hyperparameter tuning from the baseline, trying the
+# following configurations
+# d: include normalization such as batch normalization, discuss how it affects
+#    training process and accuracy
+
+# define your fully connected neural network
+class fashionFCNbatch(torch.nn.Module):
+    
+    # initialize model layers, add additional arguments to adjust
+    def __init__(self, num_layers, layer_dim):
+        # num_layers = integer number of layers in model (including input and
+        #              output layer)
+        # layer_dim = array of length num_layers + 1 that defines the number of
+        #             input and output connections of the corresponding layers
+        
+        # define network layer(s)
+        super(fashionFCNbatch,self).__init__()
+        
+        self.num_layers = num_layers
+        for i in range(num_layers):
+            setattr(self, f'layer{i+1}', torch.nn.Linear(layer_dim[i], layer_dim[i+1], torch.nn.BatchNorm1d(num_features=layer_dim[i])))
+    
+    def forward(self, input):
+       
+        # define activation function(s) and how model propagates through
+        # network for each output layer
+        
+        # models with more than one layer
+        if self.num_layers > 1:
+            # get output of layer 1
+            output = torch.nn.functional.relu(self.layer1(input))
+            
+            # propagate through layers 2 - num_layers - 1
+            for i in range(2, self.num_layers):
+                current_layer = getattr(self, f'layer{i}')
+                output = torch.nn.functional.relu(current_layer(output))
+                
+            # propagate through final layer, do not do activation function here
+            current_layer = getattr(self, f'layer{i+1}')
+            output = current_layer(output)
+            
+        # special case: models with only one layer
+        elif self.num_layers == 1:
+            output = self.layer1(input) 
+            
+        return output
+    
+# initialize neural network model with input, output, and hidden layer dimensions
+#model = fashionFCNbatch(num_layers = 4, layer_dim = [784, 50, 50, 20, 10])
+model = fashionFCN(num_layers = 4, layer_dim = [784, 50, 50, 20, 10])
+# define the learning rate and number of epochs
+learning_rate = 0.001
+epochs = 50
+
+# initialize arrays to store loss and accuracy
+train_loss_list = np.zeros((epochs,))
+validation_accuracy_list = np.zeros((epochs,))
+# define loss function and optimizer
+loss_func = torch.nn.CrossEntropyLoss() # cross entropy loss
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate) # SGD optimizer
+
+# iterate over epochs, batches with progress bar and train/validate fashionFCNdropout
+tic = time.time()
+for epoch in tqdm.trange(epochs):
+    
+    # fashionFCN TRAINING
+    for train_features, train_labels in train_batches: 
+        model.train() # set model in training mode
+        train_features = train_features.reshape(-1, 28*28) # reshape images into a vector
+        optimizer.zero_grad() # reset gradients
+        train_outputs = model(train_features) # call model
+        loss = loss_func(train_outputs, train_labels) # calculate training loss on model
+        
+        # perform optimization, back propagation
+        loss.backward()
+        optimizer.step()
+        
+    # record loss for the epoch
+    train_loss_list[epoch] = loss.item()
+    
+    # VALIDATION
+    # initialize array to store accuracy for all batches in each epoch
+    all_val_accuracies = np.zeros(len(val_batches))
+    i = 0
+    for val_features, val_labels in val_batches:
+        
+        # tell pytorch to not pass inputs to the network for training purposes
+        with torch.no_grad():
+            model.eval()
+            val_features = val_features.reshape(-1, 28*28) # reshape validation images into a vector
+            
+            # compute validation targets and accuracy
+            val_outputs = model(val_features)
+            correct = (torch.argmax(val_outputs, dim=1) == val_labels).type(torch.FloatTensor)
+            all_val_accuracies[i] = correct.mean()
+            i+=1
+            
+    # record accuracy for the epoch
+    validation_accuracy_list[epoch] = all_val_accuracies.mean()
+    
+    # print training loss, validation accuracy
+    print("\nEpoch: "+ str(epoch) +"; Training Loss: " + str(train_loss_list[epoch]*100) + '%')
+    print("Epoch: "+ str(epoch) +"; Validation Accuracy: " + str(validation_accuracy_list[epoch]*100) + '%\n')
+
+print('Time Elapsed: ' + str(time.time() - tic))
+
+# TESTING
+# initialize array to store accuracy for all batches in each epoch
+all_test_accuracies = np.zeros(len(test_batches))
+i = 0
+# tell pytorch to not pass inputs to network for training purposes
+with torch.no_grad():
+    for test_features, test_labels in test_batches:
+        model.eval()
+        test_features = test_features.reshape(-1, 28*28) # reshape test images into a vector
+
+        # compute test targets and accuracy
+        test_outputs = model(test_features)
+        correct = (torch.argmax(test_outputs, dim=1) == test_labels).type(torch.FloatTensor)
+        all_test_accuracies[i] = correct.mean()
+        i+=1
+
+# compute total (mean) accuracy and standard deviation
+test_accuracy = all_test_accuracies.mean()
+test_std = all_test_accuracies.std()
+
+print('Test Data Accuracy: ' + str(test_accuracy*100) + ' ± ' + str(test_std*100) + '%\n')
+
+# save training and testing data for plotting
+nobatch_train_loss_list = train_loss_list
+nobatch_validation_accuracy_list = validation_accuracy_list
+nobatch_test_accuracy = test_accuracy
+nobatch_test_std = test_std  
+
+#%% plot training loss and validation accuracy throughout the training epochs
+plt.figure(figsize = (8, 5), dpi=200)
+
+plt.subplot(2, 1, 1)
+plt.plot(batch_train_loss_list*100, linewidth = 3, label = 'Batch Normalization')
+plt.plot(nobatch_train_loss_list*100, linewidth = 3, label = 'No Normalization')
+plt.ylabel("Training Loss (%)")
+plt.xlim([0,50])
+plt.ylim([0,100])
+plt.legend()
+
+plt.subplot(2, 1, 2)
+plt.plot(batch_validation_accuracy_list*100, linewidth = 3, label = 'Batch Normalization')
+plt.plot(nobatch_validation_accuracy_list*100, linewidth = 3, label = 'No Normalization')
+plt.ylabel("Validation Accuracy (%)")
+plt.xlabel("Epochs")
+plt.xlim([0,50])
+sns.despine()
