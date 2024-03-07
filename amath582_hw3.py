@@ -6,9 +6,6 @@ Created on Mon Feb 12 09:54:40 2024
 @author: Reese Barrett
 
 Code for AMATH 582 Homework 3 assignment.
-
-TO-DO:
-    - what does "plot the first 16 PC modes as 28 x 28 images" mean? like one digit in all 16 modes?
 """
 
 import numpy as np
@@ -53,8 +50,7 @@ with open(filepath + 't10k-labels-idx1-ubyte','rb') as f:
     magic, size = struct.unpack(">II", f.read(8))
     ytest_labels = np.fromfile(f, dtype=np.dtype(np.uint8).newbyteorder('>'))
     
-#traindata_imgs =  xtrain.reshape((60000,28,28))    
-
+#%%
 # perform PCA on training data (keep 16 PCA modes)
 pca = PCA(n_components=16)
 xtrain_pca = pca.fit_transform(xtrain)
@@ -172,7 +168,7 @@ print("Testing Score: {}".format(RidgeCL.score(xsubtest_pca, ysubtest)))
 
 # do cross validation
 scores = cross_val_score(RidgeCL, xsubtrain_pca, ysubtrain, cv=10)
-print("%0.2f accuracy with a standard deviation of %0.2f" % (scores.mean(), scores.std()))
+print("%0.5f accuracy with a standard deviation of %0.5f" % (scores.mean(), scores.std()))
 
 # evaluate results by plotting confusion matrix
 ysubpred = RidgeCL.predict(xsubtest_pca)
@@ -212,7 +208,7 @@ print("Testing Score: {}".format(RidgeCL.score(xsubtest_pca, ysubtest)))
 
 # do cross validation
 scores = cross_val_score(RidgeCL, xsubtrain_pca, ysubtrain, cv=10)
-print("%0.2f accuracy with a standard deviation of %0.2f" % (scores.mean(), scores.std()))
+print("%0.5f accuracy with a standard deviation of %0.5f" % (scores.mean(), scores.std()))
 
 # evaluate results by plotting confusion matrix
 ysubpred = RidgeCL.predict(xsubtest_pca)
@@ -247,7 +243,7 @@ print("Testing Score: {}".format(RidgeCL.score(xsubtest_pca, ysubtest)))
 
 # do cross validation
 scores = cross_val_score(RidgeCL, xsubtrain_pca, ysubtrain, cv=10)
-print("%0.2f accuracy with a standard deviation of %0.2f" % (scores.mean(), scores.std()))
+print("%0.5f accuracy with a standard deviation of %0.5f" % (scores.mean(), scores.std()))
 
 # evaluate results by plotting confusion matrix
 ysubpred = RidgeCL.predict(xsubtest_pca)
@@ -276,7 +272,7 @@ print("Testing Score: {}".format(RidgeCL.score(xtest_pca, ytest_labels)))
 
 # do cross validation
 scores = cross_val_score(RidgeCL, xtrain_pca, ytrain_labels, cv=10)
-print("%0.2f accuracy with a standard deviation of %0.2f" % (scores.mean(), scores.std()))
+print("%0.5f accuracy with a standard deviation of %0.5f" % (scores.mean(), scores.std()))
 
 # evaluate results by plotting confusion matrix
 ytest_pred = RidgeCL.predict(xtest_pca)
@@ -285,8 +281,8 @@ fig, ax = plt.subplots(figsize=(10, 5), dpi = 200)
 disp = ConfusionMatrixDisplay.from_predictions(ytest_labels, ytest_pred, ax=ax)
 disp.im_.set_clim(0, 1000)
 ax.set_title("Confusion Matrix for RidgeClassifierCV Digit Classification")
-#%%
-# KNN classification
+
+#%% KNN classification
 # apply the KNN classifier
 KNNCL = KNeighborsClassifier(n_neighbors=3)
 KNNCL.fit(xtrain_pca,ytrain_labels)
@@ -300,7 +296,7 @@ print("Testing Score: {}".format(testing_score))
 scores = cross_val_score(KNNCL, xtrain_pca, ytrain_labels, cv=10)
 cv_mean = scores.mean()
 cv_std = scores.std()
-print("%0.2f accuracy with a standard deviation of %0.2f" % (cv_mean, cv_std))
+print("%0.5f accuracy with a standard deviation of %0.5f" % (cv_mean, cv_std))
  
 ytest_pred = KNNCL.predict(xtest_pca)
  
@@ -361,7 +357,7 @@ print("Testing Score: {}".format(LDACL.score(xtest_pca, ytest_labels)))
 
 # do cross validation
 scores = cross_val_score(LDACL, xtrain_pca, ytrain_labels, cv=10)
-print("%0.2f accuracy with a standard deviation of %0.2f" % (scores.mean(), scores.std()))
+print("%0.5f accuracy with a standard deviation of %0.5f" % (scores.mean(), scores.std()))
 
 # evaluate results by plotting confusion matrix
 ytest_pred = LDACL.predict(xtest_pca)
